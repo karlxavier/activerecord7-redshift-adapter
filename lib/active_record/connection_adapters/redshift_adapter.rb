@@ -172,8 +172,8 @@ module ActiveRecord
         @statements = StatementPool.new @connection,
                                         self.class.type_cast_config_to_integer(config[:statement_limit])
 
-        @type_map = Type::HashLookupTypeMap.new
-        initialize_type_map(@type_map)
+        @ra_type_map = Type::HashLookupTypeMap.new
+        initialize_type_map(@ra_type_map)
         @local_tz = execute('SHOW TIME ZONE', 'SCHEMA').first["TimeZone"]
         @use_insert_returning = @config.key?(:insert_returning) ? self.class.type_cast_config_to_boolean(@config[:insert_returning]) : false
       end
@@ -328,14 +328,14 @@ module ActiveRecord
       private
 
         def get_oid_type(oid, fmod, column_name, sql_type = '') # :nodoc:
-          if !type_map.key?(oid)
-            load_additional_types(type_map, [oid])
+          if !@ra_type_map.key?(oid)
+            load_additional_types(@ra_type_map, [oid])
           end
 
-          type_map.fetch(oid, fmod, sql_type) {
+          @ra_type_map.fetch(oid, fmod, sql_type) {
             warn "unknown OID #{oid}: failed to recognize type of '#{column_name}'. It will be treated as String."
             Type::Value.new.tap do |cast_type|
-              type_map.register_type(oid, cast_type)
+              @ra_type_map.register_type(oid, cast_type)
             end
           }
         end
@@ -433,8 +433,8 @@ module ActiveRecord
           !default_value && (%r{\w+\(.*\)} === default)
         end
 
-        def load_additional_types(type_map, oids = nil) # :nodoc:
-          initializer = OID::TypeMapInitializer.new(type_map)
+        def load_additional_types(ra_type_map, oids = nil) # :nodoc:
+          initializer = OID::TypeMapInitializer.new(ra_type_map)
 
           if supports_ranges?
             query = <<-SQL
