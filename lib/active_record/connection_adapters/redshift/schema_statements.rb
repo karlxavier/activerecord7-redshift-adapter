@@ -2,7 +2,7 @@ module ActiveRecord
   module ConnectionAdapters
     module Redshift
 
-      if ActiveRecord::VERSION::MAJOR >= 6 && ActiveRecord::VERSION::MINOR >= 1
+      if ActiveRecord::VERSION::MAJOR >= 7
         class SchemaCreation < SchemaCreation
           private
 
