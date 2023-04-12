@@ -399,7 +399,7 @@ module ActiveRecord
           when /^smallint/i
             2
           else
-            super
+            $1.to_i if sql_type =~ /\((.*)\)/
           end
         end
 
