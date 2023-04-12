@@ -403,6 +403,17 @@ module ActiveRecord
           end
         end
 
+        def extract_scale(sql_type)
+          case sql_type
+          when /\((\d+)\)/ then 0
+          when /\((\d+)(,(\d+))\)/ then $3.to_i
+          end
+        end
+
+        def extract_precision(sql_type)
+          $1.to_i if sql_type =~ /\((\d+)(,\d+)?\)/
+        end
+
         # Extracts the value from a PostgreSQL column default definition.
         def extract_value_from_default(default) # :nodoc:
           case default
