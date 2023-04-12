@@ -173,7 +173,7 @@ module ActiveRecord
                                         self.class.type_cast_config_to_integer(config[:statement_limit])
 
         @type_map = Type::HashLookupTypeMap.new
-        initialize_type_map(type_map)
+        initialize_type_map(@type_map)
         @local_tz = execute('SHOW TIME ZONE', 'SCHEMA').first["TimeZone"]
         @use_insert_returning = @config.key?(:insert_returning) ? self.class.type_cast_config_to_boolean(@config[:insert_returning]) : false
       end
@@ -341,21 +341,21 @@ module ActiveRecord
         end
 
         def initialize_type_map(m) # :nodoc:
-          register_class_with_limit m, 'int2', Type::Integer
-          register_class_with_limit m, 'int4', Type::Integer
-          register_class_with_limit m, 'int8', Type::Integer
+          register_class_with_limit m, 'int2', ActiveRecord::Type::Integer
+          register_class_with_limit m, 'int4', ActiveRecord::Type::Integer
+          register_class_with_limit m, 'int8', ActiveRecord::Type::Integer
           m.alias_type 'oid', 'int2'
-          m.register_type 'float4', Type::Float.new
+          m.register_type 'float4', ActiveRecord::Type::Float.new
           m.alias_type 'float8', 'float4'
-          m.register_type 'text', Type::Text.new
-          register_class_with_limit m, 'varchar', Type::String
+          m.register_type 'text', ActiveRecord::Type::Text.new
+          register_class_with_limit m, 'varchar', ActiveRecord::Type::String
           m.alias_type 'char', 'varchar'
           m.alias_type 'name', 'varchar'
           m.alias_type 'bpchar', 'varchar'
-          m.register_type 'bool', Type::Boolean.new
+          m.register_type 'bool', ActiveRecord::Type::Boolean.new
           m.alias_type 'timestamptz', 'timestamp'
-          m.register_type 'date', Type::Date.new
-          m.register_type 'time', Type::Time.new
+          m.register_type 'date', ActiveRecord::Type::Date.new
+          m.register_type 'time', ActiveRecord::Type::Time.new
 
           m.register_type 'timestamp' do |_, _, sql_type|
             precision = extract_precision(sql_type)
@@ -376,13 +376,20 @@ module ActiveRecord
             if fmod && (fmod - 4 & 0xffff).zero?
               # FIXME: Remove this class, and the second argument to
               # lookups on PG
-              Type::DecimalWithoutScale.new(precision: precision)
+              ActiveRecord::Type::DecimalWithoutScale.new(precision: precision)
             else
               OID::Decimal.new(precision: precision, scale: scale)
             end
           end
 
           load_additional_types(m)
+        end
+
+        def register_class_with_limit(mapping, key, klass)
+          mapping.register_type(key) do |*args|
+            limit = extract_limit(args.last)
+            klass.new(limit: limit)
+          end
         end
 
         def extract_limit(sql_type) # :nodoc:
@@ -576,7 +583,7 @@ module ActiveRecord
           # If using Active Record's time zone support configure the connection to return
           # TIMESTAMP WITH ZONE types in UTC.
           unless variables["timezone"]
-            if ActiveRecord::Base.default_timezone == :utc
+            if ActiveRecord.default_timezone == :utc
               variables["timezone"] = "UTC"
             elsif @local_tz
               variables["timezone"] = @local_tz
@@ -675,14 +682,14 @@ module ActiveRecord
         end
 
         def update_typemap_for_default_timezone
-          if @default_timezone != ActiveRecord::Base.default_timezone && @timestamp_decoder
-            decoder_class = ActiveRecord::Base.default_timezone == :utc ?
+          if @default_timezone != ActiveRecord.default_timezone && @timestamp_decoder
+            decoder_class = ActiveRecord.default_timezone == :utc ?
               PG::TextDecoder::TimestampUtc :
               PG::TextDecoder::TimestampWithoutTimeZone
 
             @timestamp_decoder = decoder_class.new(@timestamp_decoder.to_h)
             @connection.type_map_for_results.add_coder(@timestamp_decoder)
-            @default_timezone = ActiveRecord::Base.default_timezone
+            @default_timezone = ActiveRecord.default_timezone
           end
         end
 
