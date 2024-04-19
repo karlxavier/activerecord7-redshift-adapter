@@ -179,7 +179,7 @@ module ActiveRecord
       end
 
       # Clears the prepared statements cache.
-      def clear_cache!
+      def clear_cache!(new_connection: true)
         @statements.clear
       end
 
